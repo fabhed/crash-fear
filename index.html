@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+</head>
+
+<body>
+	<div id="menuContainer">
+		<div id="startScreen">
+			<h1 class="title">Achtung Die Kurve</h1>
+			<table class="table">
+				<thead>
+					<td style="width: 200px"></td>
+					<td>left</td>
+					<td>right</td>
+				</thead>
+				<tbody id="playerList">
+
+				</tbody>
+			</table>
+			<button class="btn" id="startButton">Start</button>
+		</div>
+	</div>
+</body>
+
+<script src="js/pixi.min.js"></script>
+<script src="js/utilities.js"></script>
+<script src="js/game/players.js"></script>
+<script src="js/game/keyboard.js"></script>
+<script src="js/game/collision.js"></script>
+<script src="js/game/Player.js"></script>
+<script src="js/game/PowerUp.js"></script>
+<script src="js/game/index.js"></script>
+<script src="js/game.js"></script>
+<style>
+	body, html {
+		padding: 0;
+		margin: 0;
+		font-family: Roboto;
+	}
+	.title {
+		font-size: 100px;
+	}
+	.btn {
+		width: 100%;
+		padding: .5em;
+		font-size: 50px;
+		background-color: white;
+		border: none;
+	}
+	.btn:hover {
+		cursor: pointer;
+	}
+	.table td {
+		padding: 10px;
+		font-size: 30px;
+	}
+	.player-row:hover {
+		cursor: pointer;
+	}
+	#menuContainer {
+		color: white;
+		position: absolute;
+		display: flex;
+		justify-content: center;
+		justify-items: center;
+		z-index: 1000;
+		width: 100%;
+	}
+	#startScreen {
+		display: absolute;
+	}
+</style>
+
+</html>
