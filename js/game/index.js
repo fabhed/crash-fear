@@ -3,6 +3,7 @@ class Game extends PIXI.Application {
 	pointsToWin = 10
 	paused = false
 	roundActive = false
+	gameStarted = false
 	elapsedTime = 0
 	borderWidth = 5
 	countdown = 0
@@ -63,12 +64,15 @@ class Game extends PIXI.Application {
 			this.renderer.resize(window.innerWidth, window.innerHeight);
 		})
 		this.renderer.resize(window.innerWidth, window.innerHeight);
-
+		console.log(this.height, this.width, this.height * this.width)
 		// Tail containers
-		this.tailHitBoxes = new PIXI.Container()
-		this.stage.addChild(this.tailHitBoxes)
-		this.tailVanity = new PIXI.Container()
-		this.stage.addChild(this.tailVanity)
+		// this.tailHitBoxes = new PIXI.Container()
+		// this.stage.addChild(this.tailHitBoxes)
+		this.lineContainer = new PIXI.Container()
+		this.stage.addChild(this.lineContainer)
+
+		this.tails = []
+		this.clearTails()
 
 		// Create borders graphics (get's drawn in loop)
 		this.borders = new PIXI.Graphics()
@@ -90,10 +94,15 @@ class Game extends PIXI.Application {
 			if (this.roundActive) {
 				this.paused = !this.paused
 				this.pauseIndicator.visible = this.paused
-			} else {
+			} else if (this.gameStarted){
 				this.newRound()
+			} else {
+				this.startGame()
 			}
 		}
+
+		this.hitBoxesDebug = new PIXI.Graphics()
+		this.stage.addChild(this.hitBoxesDebug)
 
 		this.debugKey = keyboard("§")
 		this.debugKey.press = this.toggleDebugMode.bind(this)
@@ -104,12 +113,28 @@ class Game extends PIXI.Application {
 
 		// Stat the first round
 		// this.newRound()
-
 	}
 	toggleDebugMode() {
 		this.debugMode = !this.debugMode
-		this.tailHitBoxes.visible = this.debugMode
-		this.tailVanity.alpha = this.debugMode ? 0.5 : 1
+		// this.tailHitBoxes.visible = this.debugMode
+		this.drawHitBoxes()
+
+		this.lineContainer.alpha = this.debugMode ? 0.5 : 1
+	}
+	drawHitBoxes() {
+		this.hitBoxesDebug.clear()
+		if (!this.debugMode) return
+		this.hitBoxesDebug.beginFill(0x00FF00)
+
+		for (let x = 0; x < this.tails.length; x++) {
+			for (let y = 0; y < this.tails[x].length; y++) {
+				// console.log(x,y)
+				if (this.tails[x][y] !== undefined) {
+					this.hitBoxesDebug.drawRect(x, y, 1, 1)
+				}
+			}
+		}
+		this.hitBoxesDebug.endFill()
 	}
 	setControlListener(event) {
 		let aP = this.startMenu.activePlayer
@@ -129,15 +154,12 @@ class Game extends PIXI.Application {
 	}
 	createStartScreen() {
 		this.startButton.addEventListener("click", () => {
-			this.createPlayers()
-			this.newRound()
-			this.startScreen.style.display = "none"
-
+			this.startGame()
 		});
 		this.boundedEventListener = this.setControlListener.bind(this)
 		document.addEventListener('keydown', this.boundedEventListener)
 		players.forEach(p => {
-			p.controls = {}
+			if (!p.controls) p.controls = {}
 			p.elements = {}
 			let row = document.createElement('tr')
 			row.className = 'player-row'
@@ -217,6 +239,12 @@ class Game extends PIXI.Application {
 			this.portalBorderAnimFactor = factor
 		}
 	}
+	startGame() {
+		this.createPlayers()
+		this.newRound()
+		this.startScreen.style.display = "none"
+		this.gameStarted = true
+	}
 	async newRound() {
 		if (this.countdown !== 0) return // Disable starting a new round when countdown is active
 		this.powerUpSpawnCooldown = 0 // Spawn a powerup directly on round start
@@ -226,7 +254,8 @@ class Game extends PIXI.Application {
 			p.alive = true
 			p.effects = []
 			p.randomizePosition(this.renderer.view.width, this.renderer.view.height)
-			p.drawHead()
+			// p.drawHead()
+			console.log(p.head)
 		})
 		
 		// Remove entities
@@ -238,7 +267,13 @@ class Game extends PIXI.Application {
 		this.roundActive = true
 	}
 	clearTails() {
-		deleteObjects(this.tailHitBoxes.children.concat(this.tailVanity.children))
+		for (let x = 0; x < this.width; x++) {
+			this.tails[x] = []
+		}
+
+		deleteObjects(this.lineContainer.children)
+
+		// deleteObjects(this.tailHitBoxes.children.concat(this.lineContainer.children))
 	}
 	clearPowerUps() {
 		deleteObjects(this.powerUps.children)
@@ -247,7 +282,7 @@ class Game extends PIXI.Application {
 		document.removeEventListener('keydown', this.boundedEventListener)
 
 		// Create players
-		console.log(this.activatedPlayers)
+		console.log(this.activatedPlayers, players)
 		let activatedNames = this.activatedPlayers.map(aP => aP.name)
 		this.players = players
 			.filter(p => activatedNames.includes(p.name))
@@ -287,17 +322,17 @@ class Game extends PIXI.Application {
 
 		})
 	}
-	loop(speedFactor) {
-		// speedFactor is a factor showing if the game is going slower or faster than expected - speedFactor = 1 is aimed speed
+	loop(lag) {
+		// lag is a factor showing if the game is going slower or faster than expected - lag = 1 is aimed speed
 		if (!this.isRunning) return
-		const deltaTime = speedFactor / 60 // seconds
+		const deltaTime = lag / 60 // seconds
 		this.elapsedTime += deltaTime
 
 		this.drawBorders()
 		// Handle players
 		this.players.forEach(p => {
 			// Update players
-			p.update(deltaTime, this.elapsedTime, this.tailHitBoxes, this.tailVanity)
+			p.update(deltaTime, this.elapsedTime, this.tails, this.lineContainer)
 			let canTp = this.portalBorders || p.canTeleportThroughBorders // Global or on player
 			let offset = this.borderWidth + p.radius
 			if (p.x - p.width / 2 < this.borderWidth) { // left
@@ -310,15 +345,25 @@ class Game extends PIXI.Application {
 				canTp ? p.y = offset : this.killPlayer(p)
 			}
 			// Check if colliding with any tail
-			this.tailHitBoxes.children.forEach(hitBox => {
-				let oldEnough = this.elapsedTime - hitBox.createdAt > (.5 / p.velocity)
-				let isSelf = hitBox.createdBy === p.tailColor
-				let collides = p.collidesWith(hitBox)
-				if (collides && (oldEnough || !isSelf)) {
-					this.killPlayer(p)
+			// this.tailHitBoxes.children.forEach(hitBox => {
+			// 	let oldEnough = this.elapsedTime - hitBox.createdAt > (.5 / p.velocity)
+			// 	let isSelf = hitBox.createdBy === p.tailColor
+			// 	let collides = p.collidesWith(hitBox)
+			// 	if (collides && (oldEnough || !isSelf)) {
+			// 		this.killPlayer(p)
+			// 	}
+			// })
+			// console.time("test")
+			let oldEnoughTime = (.5 / p.velocity)
+			for (let x = p.hitBox.minX; x <= p.hitBox.maxX; x++) {
+				for (let y = p.hitBox.minY; y <= p.hitBox.maxY; y++) {
+					if (this.elapsedTime - this.tails[Math.round(x)][Math.round(y)] > oldEnoughTime) {
+						console.log(x,y)
+						this.killPlayer(p)
+					}
 				}
-			})
-
+			}
+			// console.timeEnd("test")
 			// Check if colliding with a powerUp
 			this.powerUps.children.forEach((powerUp, i) => {
 				let collides = p.collidesWith(powerUp)
