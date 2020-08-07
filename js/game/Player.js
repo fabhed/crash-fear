@@ -20,6 +20,17 @@ class Player extends PIXI.Container {
 			maxY: this.y + this.hitBoxSize / 2
 		}
 	}
+	get spawnBoxSize () {
+		return this.hitBoxSize * 0.8
+	}
+	get spawnBox() {
+		return {
+			minX: this.x - this.spawnBoxSize / 2,
+			maxX: this.x + this.spawnBoxSize / 2,
+			minY: this.y - this.spawnBoxSize / 2,
+			maxY: this.y + this.spawnBoxSize / 2
+		}
+	}
 	get activeEffects () {
 		return this.effects.filter(e => !e.timedOut)
 	}
@@ -40,6 +51,9 @@ class Player extends PIXI.Container {
 	}
 	get turn90Degrees () {
 		return this.activeEffects.some(e => e.square)
+	}
+	get color () {
+		return this.tailColor
 	}
 	isPaintingCooldown = 0
 	isMakingHitboxesCooldown = 0
@@ -67,7 +81,7 @@ class Player extends PIXI.Container {
 
 		this.lag = 1
 		// Fixed
-		this.baseRadius = 4 // size
+		this.baseRadius = 5 // size
 		this.baseVelocity = 3
 		this.turnVelocity = this.velocity / 50
 
@@ -80,9 +94,9 @@ class Player extends PIXI.Container {
 	drawHead() {
 		this.head.clear()
 		const color = this.hasInvertedControls ? 0x183153 : 0xf1e05a // blue or yellow
-		
 		this.head.beginFill(color)
-		if (this.turn90Degrees) {
+		
+		if (this.turn90Degrees ) {
 			this.head.drawRect(-this.hitBoxSize / 2, -this.hitBoxSize / 2, this.hitBoxSize, this.hitBoxSize)
 		} else {
 			this.head.drawCircle(0, 0, this.radius)
@@ -90,20 +104,15 @@ class Player extends PIXI.Container {
 		this.head.endFill()
 
 		if (this.canTeleportThroughBorders) {
-			this.head.alpha = 0.2
+			this.head.alpha = 0.4
 		} else {
 			this.head.alpha = 1
 		}
-		// -- Rectangular head --
-		// circle.beginFill(0x0000FF)
-		// circle.endFill()
-		// circle.alpha = 0.5
 	}
 	randomizePosition(width, height) {
 		this.x = Math.random() * width
 		this.y = Math.random() * height
 		this.direction = Math.random() * 2 * Math.PI
-		this.drawHead()
 	}
 	turn() {
 		let left, right
@@ -134,17 +143,18 @@ class Player extends PIXI.Container {
 		const dx = Math.cos(this.direction) * this.velocity, // x-component
 			dy = Math.sin(this.direction) * this.velocity // y-component
 		this.lastX = this.x
-		this.lastY = this.x
+		this.lastY = this.y
 		this.y = this.y + dy
 		this.x = this.x + dx
 	}
 	die() {
-		if (this.isInvincible) return
+		if (this.isInvincible) return false
+		this.frameCount = 0
 		this.alive = false
+		return true
 
 	}
 	collidesWith(object) {
-		// if (!this.isPainting) return false
 		return AABBIntersectsAABB(this.hitBox, ObjectToMinMax(object))
 	}
 	addEffect(effect) {
@@ -161,32 +171,40 @@ class Player extends PIXI.Container {
 			this.drawHead()
 		}, effect.duration * 1000)
 	}
+	makeHole() {
+		let holeFactor = .03
+		this.isMakingHitboxesCooldown = holeFactor * this.radius
+		this.isPaintingCooldown = this.isMakingHitboxesCooldown * 0.8
+	}
 	update(dt, elapsedTime, tailHitBoxes, lineContainer) {
 		this.lag = dt * 60
 		if (!this.alive) return
-		let hitBox, line
-
+		
 		if (Math.random() > 0.98 && this.isPainting && this.isMakingHitboxes) {
-			let holeFactor = .03
-			this.isPaintingCooldown = holeFactor * this.radius
-			this.isMakingHitboxesCooldown = this.isPaintingCooldown
+			this.makeHole()
+		}
+		// Create hitbox
+		if (this.isMakingHitboxes) {
+			for (let x = this.spawnBox.minX; x <= this.spawnBox.maxX; x++) {
+				for (let y = this.spawnBox.minY; y <= this.spawnBox.maxY; y++) {
+					if (!tailHitBoxes[Math.round(x)][Math.round(y)]) {
+						tailHitBoxes[Math.round(x)][Math.round(y)] = elapsedTime
+					}
+				}
+			}
 		}
 
+		let line
 		// Set begining of tail part
 		if (this.isPainting) {
 			line = new PIXI.Graphics()
 			line.lineStyle({
 				width: this.radius * 2,
-				color: this.tailColor
-			})
-
-			line.lineStyle({
-				width: this.radius * 2,
-				color: this.tailColor
+				color: this.tailColor,
+				join: PIXI.LINE_JOIN.ROUND, // Not working?
 			})
 			line.moveTo(this.x, this.y)
-			lineContainer.addChild(line);
-
+			lineContainer.addChild(line)
 		}
 
 		// Make icremental movement
@@ -195,32 +213,7 @@ class Player extends PIXI.Container {
 
 		// Set end of tail part 
 		if (this.isPainting) {
-			
 			line.lineTo(this.x, this.y);
-		}
-
-		// Create hitbox
-		if (this.isMakingHitboxes) {
-			// hitBox = new PIXI.Graphics()
-			// hitBox.createdAt = elapsedTime
-			// hitBox.createdBy = this.tailColor
-			// hitBox.beginFill(0xFF0000)
-			// const sizeFactor = 0.8
-			// const rectSize = this.hitBoxSize * sizeFactor
-			// hitBox.drawRect(-rectSize / 2, -rectSize / 2, rectSize, rectSize)
-			// hitBox.endFill()
-			// hitBox.x = this.x
-			// hitBox.y = this.y
-			// tailHitBoxes.addChild(hitBox);
-
-
-			// for (let x = this.hitBox.minX; x <= this.hitBox.maxX; x++) {
-			// 	for (let y = this.hitBox.minY; y <= this.hitBox.maxY; y++) {
-			// 		tailHitBoxes[Math.round(x)][Math.round(y)] = elapsedTime
-			// 	}	
-			// }
-
-			tailHitBoxes[Math.round(this.x)][Math.round(this.y)] = elapsedTime
 		}
 
 		this.isPaintingCooldown = updateCooldown(this.isPaintingCooldown, dt)

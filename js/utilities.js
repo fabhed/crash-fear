@@ -74,3 +74,12 @@ function animateAlpha(current, directionFactor, step = 0.005) {
 		factor: newDirectionFactor 
 	}
 }
+
+/**
+ * 
+ * @param {*} number a hexa decimal number representing the color
+ * @returns Color str begining with a #
+ */
+function hexToColor(number) {
+	return '#' + number.toString(16)
+}

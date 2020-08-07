@@ -17,13 +17,19 @@ class Game extends PIXI.Application {
 		// stroke: "black",
 		// strokeThickness: 2
 	})
-	startScreen = document.getElementById('startScreen')
-	startMenu = {
+	startScreen = {
 		activePlayer: null,
-		pressKeyNode: 'Press desired key'
+		pressKeyNode: 'Press desired key',
+		playerList: document.getElementById('playerList'),
+		startButton: document.getElementById('startButton'),
+		selectPointsContainer: document.getElementById('selectPointsContainer'),
+		container: document.getElementById('startScreen')
 	}
-	playerList = document.getElementById('playerList')
-	startButton = document.getElementById('startButton')
+	scoreboard = {
+		container: document.getElementById('scoreboard'),
+		list: document.getElementById('scoreboardList'),
+		subtitle: document.querySelector('#scoreboard p')
+	}
 	get isRunning() {
 		return this.roundActive && !this.paused
 	}
@@ -64,7 +70,6 @@ class Game extends PIXI.Application {
 			this.renderer.resize(window.innerWidth, window.innerHeight);
 		})
 		this.renderer.resize(window.innerWidth, window.innerHeight);
-		console.log(this.height, this.width, this.height * this.width)
 		// Tail containers
 		// this.tailHitBoxes = new PIXI.Container()
 		// this.stage.addChild(this.tailHitBoxes)
@@ -104,6 +109,10 @@ class Game extends PIXI.Application {
 		this.hitBoxesDebug = new PIXI.Graphics()
 		this.stage.addChild(this.hitBoxesDebug)
 
+		this.testContainer = new PIXI.Container()
+		this.testContainer.zIndex = 10000
+		this.stage.addChild(this.testContainer)
+
 		this.debugKey = keyboard("§")
 		this.debugKey.press = this.toggleDebugMode.bind(this)
 		this.toggleDebugMode()
@@ -121,15 +130,15 @@ class Game extends PIXI.Application {
 
 		this.lineContainer.alpha = this.debugMode ? 0.5 : 1
 	}
-	drawHitBoxes() {
+	drawHitBoxes(oldEnoughTime) {
 		this.hitBoxesDebug.clear()
 		if (!this.debugMode) return
-		this.hitBoxesDebug.beginFill(0x00FF00)
-
+		
 		for (let x = 0; x < this.tails.length; x++) {
 			for (let y = 0; y < this.tails[x].length; y++) {
-				// console.log(x,y)
 				if (this.tails[x][y] !== undefined) {
+					if (oldEnoughTime && this.elapsedTime - this.tails[x][y] < oldEnoughTime) this.hitBoxesDebug.beginFill(0x0000FF)
+					else this.hitBoxesDebug.beginFill(0x00FF00)
 					this.hitBoxesDebug.drawRect(x, y, 1, 1)
 				}
 			}
@@ -137,33 +146,34 @@ class Game extends PIXI.Application {
 		this.hitBoxesDebug.endFill()
 	}
 	setControlListener(event) {
-		let aP = this.startMenu.activePlayer
-		console.log(aP)
+		let aP = this.startScreen.activePlayer
 		if (aP) {
 			if (!aP.controls.left) {
 				aP.controls.left = event.key
 				aP.elements.selectLeft.innerText = event.key
-				aP.elements.selectRight.innerText = this.startMenu.pressKeyNode
+				aP.elements.selectRight.innerText = this.startScreen.pressKeyNode
 			} else if (!aP.controls.right) {
 				aP.controls.right = event.key
 				// No longer needs to be active
 				aP.elements.selectRight.innerText = event.key
-				this.startMenu.activePlayer = null
+				this.startScreen.activePlayer = null
 			}
 		}
 	}
 	createStartScreen() {
-		this.startButton.addEventListener("click", () => {
+		this.startScreen.startButton.addEventListener("click", () => {
 			this.startGame()
 		});
 		this.boundedEventListener = this.setControlListener.bind(this)
 		document.addEventListener('keydown', this.boundedEventListener)
+
+		// Add player selection
 		players.forEach(p => {
 			if (!p.controls) p.controls = {}
 			p.elements = {}
 			let row = document.createElement('tr')
 			row.className = 'player-row'
-			row.style.color = '#' + p.color.toString(16)
+			row.style.color = hexToColor(p.color)
 			let name = document.createElement('td')
 			name.textContent = p.name
 			let selectLeft = document.createElement('td')
@@ -175,21 +185,39 @@ class Game extends PIXI.Application {
 			row.append(selectRight)
 			row.style.opacity = 0.5;
 			row.addEventListener('click', () => {
-				if (!this.startMenu.activePlayer) {
-					this.startMenu.activePlayer = p
-				} else {
-					return
-				}
-				// If not currently setting controls sel
-				if ((!p.controls.left && !p.controls.right) || (p.controls.left && p.controls.right)) {
-					this.startMenu.activePlayer = p
+				if (!p.controls.left && !p.controls.right) {
+					// If no controls are set, start setting them
+					this.startScreen.activePlayer = p
 					p.controls = {}
-					p.elements.selectLeft.innerText = this.startMenu.pressKeyNode
+					p.elements.selectLeft.innerText = this.startScreen.pressKeyNode
+					p.elements.selectRight.innerText = null
+				} else if (p.controls.left && p.controls.right) {
+					// If both controls are set, remove them if clicked
+					this.startScreen.activePlayer = null
+					p.controls = {}
+					p.elements.selectLeft.innerText = null
 					p.elements.selectRight.innerText = null
 				}
 				
 			})
-			this.playerList.append(row)
+			this.startScreen.playerList.append(row)
+		})
+
+		// Points selection
+		let pointsArray = [5, 10, 15, 20]
+		pointsArray.forEach(points => {
+			let e = document.createElement('button')
+			e.innerText = points
+			e.className = points === this.pointsToWin ? 'btn active' : 'btn'
+			e.addEventListener('click', () => {
+				this.pointsToWin = points
+				for (let index = 0; index < this.startScreen.selectPointsContainer.children.length; index++) {
+					const child = this.startScreen.selectPointsContainer.children[index];
+					child.className = points == child.innerText ? 'btn active' : 'btn'
+				}
+			})
+			this.startScreen.selectPointsContainer.appendChild(e)
+
 		})
 
 	}
@@ -242,11 +270,13 @@ class Game extends PIXI.Application {
 	startGame() {
 		this.createPlayers()
 		this.newRound()
-		this.startScreen.style.display = "none"
+		this.startScreen.container.style.display = "none"
 		this.gameStarted = true
 	}
 	async newRound() {
 		if (this.countdown !== 0) return // Disable starting a new round when countdown is active
+		this.scoreboard.container.style.display = 'none' // Hide scoreboard
+
 		this.powerUpSpawnCooldown = 0 // Spawn a powerup directly on round start
 		clearInterval(this.portalBordersTimer) // clear portal border timer if it exists
 		// Reset all players
@@ -254,8 +284,6 @@ class Game extends PIXI.Application {
 			p.alive = true
 			p.effects = []
 			p.randomizePosition(this.renderer.view.width, this.renderer.view.height)
-			// p.drawHead()
-			console.log(p.head)
 		})
 		
 		// Remove entities
@@ -282,17 +310,32 @@ class Game extends PIXI.Application {
 		document.removeEventListener('keydown', this.boundedEventListener)
 
 		// Create players
-		console.log(this.activatedPlayers, players)
 		let activatedNames = this.activatedPlayers.map(aP => aP.name)
 		this.players = players
 			.filter(p => activatedNames.includes(p.name))
 			.map(p => {
 				return new Player(p)
 			})
-		// Add the players to the stage
+		
 		this.players.forEach(p => {
+			// Add the players to the stage
 			this.stage.addChild(p)
+
+			// Add the players to the scoreboard
+			let tr = document.createElement('tr')
+			tr.style.color = hexToColor(p.color)
+
+			tr.setAttribute('data-name', p.name)
+			let tdName = document.createElement('td')
+			tdName.innerText = p.name
+			tr.append(tdName)
+			let tdPoints = document.createElement('td')
+			tdPoints.innerText = p.points
+			tr.append(tdPoints)
+			this.scoreboard.list.append(tr)
 		})
+		this.scoreboard.subtitle.innerText = `First to ${this.pointsToWin} points wins!`
+
 	}
 	createPowerUp() {
 		if (this.powerUpSpawnCooldown > 0) return
@@ -332,7 +375,9 @@ class Game extends PIXI.Application {
 		// Handle players
 		this.players.forEach(p => {
 			// Update players
-			p.update(deltaTime, this.elapsedTime, this.tails, this.lineContainer)
+			if (!p.alive) return
+			p.update(deltaTime, this.elapsedTime, this.tails, this.lineContainer, this.testContainer)
+
 			let canTp = this.portalBorders || p.canTeleportThroughBorders // Global or on player
 			let offset = this.borderWidth + p.radius
 			if (p.x - p.width / 2 < this.borderWidth) { // left
@@ -344,24 +389,25 @@ class Game extends PIXI.Application {
 			} else if (p.y + p.height / 2 > this.height - this.borderWidth) { // down
 				canTp ? p.y = offset : this.killPlayer(p)
 			}
-			// Check if colliding with any tail
-			// this.tailHitBoxes.children.forEach(hitBox => {
-			// 	let oldEnough = this.elapsedTime - hitBox.createdAt > (.5 / p.velocity)
-			// 	let isSelf = hitBox.createdBy === p.tailColor
-			// 	let collides = p.collidesWith(hitBox)
-			// 	if (collides && (oldEnough || !isSelf)) {
-			// 		this.killPlayer(p)
-			// 	}
-			// })
-			// console.time("test")
-			let oldEnoughTime = (.5 / p.velocity)
+			let oldEnoughTime = (.8 / p.velocity * lag)
+			let first = true
 			for (let x = p.hitBox.minX; x <= p.hitBox.maxX; x++) {
+				let row = this.tails[Math.round(x)]
+				if (row === undefined) continue;
 				for (let y = p.hitBox.minY; y <= p.hitBox.maxY; y++) {
-					if (this.elapsedTime - this.tails[Math.round(x)][Math.round(y)] > oldEnoughTime) {
-						console.log(x,y)
+					let point = row[Math.round(y)]
+					if (point === undefined) continue;
+					if (first) {
+						first = false
+					}
+					if (this.elapsedTime - point > oldEnoughTime) {
 						this.killPlayer(p)
+						break;
 					}
 				}
+			}
+			if (this.debugMode) {
+				this.drawHitBoxes(oldEnoughTime)
 			}
 			// console.timeEnd("test")
 			// Check if colliding with a powerUp
@@ -398,10 +444,14 @@ class Game extends PIXI.Application {
 		this.createPowerUp()
 	}
 	killPlayer(player) {
-		player.die()
-		this.alivePlayers.forEach(p => {
-			p.score++
-		})
+		if (!player.alive) return
+		let died = player.die()
+		if (died) {
+			console.log('killed', player.name)
+			this.alivePlayers.forEach(p => {
+				p.points++
+			})
+		}
 		if (this.players.length > 1) {
 			if (this.players.filter(p => p.alive).length <= 1) {
 				this.endRound()
@@ -413,8 +463,31 @@ class Game extends PIXI.Application {
 		}
 	}
 	endRound() {
-		this.winner = this.players.find(p => p.alive)
-		this.showMessage(this.winner ? `${this.winner.name} is the winner!` : 'Everyone died')
+		this.winner = this.players.find(p => p.points >= this.pointsToWin)
+		this.winner && this.showMessage(`${this.winner.name} is the winner!`)
 		this.roundActive = false
+
+		this.players.find(p => {
+			console.log(p.points)
+		})
+		this.scoreboard.container.style.display = 'block'
+		console.log([...this.scoreboard.list.children])
+		for (let index = 0; index < this.scoreboard.list.children.length; index++) {
+			const tr = this.scoreboard.list.children[index];
+			let pName = tr.getAttribute('data-name')
+			let player = this.players.find(p => p.name === pName)
+			tr.lastChild.innerText = player.points
+		}
+
+		[...this.scoreboard.list.children]
+			.sort((a, b) => {
+				console.log("hello", a.lastChild.innerText, b.lastChild.innerText)
+				console.log("hello", a.lastChild.innerText > b.lastChild.innerText)
+				// console.log()
+				return a.lastChild.innerText > b.lastChild.innerText ? -1 : 1
+			})
+			.forEach(node => this.scoreboard.list.append(node))
+
+		
 	}
 }

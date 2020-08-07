@@ -8,17 +8,32 @@
 	<div id="menuContainer">
 		<div id="startScreen">
 			<h1 class="title">Achtung Die Kurve</h1>
-			<table class="table">
+			<h2>Click on a name to select controls</h2>
+			<table class="table mb">
 				<thead>
 					<td style="width: 200px"></td>
-					<td>left</td>
-					<td>right</td>
+					<td>Left</td>
+					<td>Right</td>
 				</thead>
 				<tbody id="playerList">
 
 				</tbody>
 			</table>
-			<button class="btn" id="startButton">Start</button>
+			<h2>Select points needed to win</h2>
+			<div id="selectPointsContainer" class="mb">
+			</div>
+			<button class="btn lg" id="startButton">Start</button>
+		</div>
+		<div id="scoreboard" style="display: none">
+			<h2>Scoreboard</h2>
+			<p style="text-align: center"></p>
+			<table class="table">
+				<thead>
+					<td style="width: 200px">Player</td>
+					<td>Points</td>
+				</thead>
+				<tbody id="scoreboardList"></tbody>
+			</table>
 		</div>
 	</div>
 </body>
@@ -38,15 +53,26 @@
 		margin: 0;
 		font-family: Roboto;
 	}
+	h1, h2 {
+		text-align: center;
+		margin-bottom: .25em;
+	}
 	.title {
 		font-size: 100px;
 	}
 	.btn {
 		width: 100%;
 		padding: .5em;
-		font-size: 50px;
+		font-size: 2em;
 		background-color: white;
 		border: none;
+	}
+	.btn.lg {
+		font-size: 3em
+	}
+	.btn.active {
+		background-color: teal;
+		color: white;
 	}
 	.btn:hover {
 		cursor: pointer;
@@ -69,6 +95,14 @@
 	}
 	#startScreen {
 		display: absolute;
+	}
+	#selectPointsContainer {
+		display: grid;
+		justify-content: center;
+		grid-template-columns: repeat(4, 1fr);
+	}
+	.mb {
+		margin-bottom: 1em
 	}
 </style>
 
