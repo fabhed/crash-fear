@@ -1,109 +1,66 @@
 <!doctype html>
 <html lang="en">
 
-<head>
-</head>
+	<head>
+		<title>Crash Fear</title>
+		<meta description="A HTML5 game based on the Achtung Die Kurve Classic" />
+		<link rel="stylesheet" href="/style.css">
+	</head>
 
-<body>
-	<div id="menuContainer">
-		<div id="startScreen">
-			<h1 class="title">Achtung Die Kurve</h1>
-			<h2>Click on a name to select controls</h2>
-			<table class="table mb">
-				<thead>
-					<td style="width: 200px"></td>
-					<td>Left</td>
-					<td>Right</td>
-				</thead>
-				<tbody id="playerList">
+	<body>
+		<div id="menuContainer">
+			<div id="startScreen">
+				<h1 class="title">Crash Fear</h1>
+				<h2>Click on a name to select controls</h2>
+				<div id="github">
+					<a href="https://github.com/minifjurt123/crash-fear" target="_blank" title="View on github">
+						<img src="/GitHub-Mark-Light-64px.png">
+					</a>
+				</div>
+				<table class="table mb">
+					<thead>
+						<td style="width: 200px"></td>
+						<td style="width: 100px">Left</td>
+						<td style="width: 100px">Right</td>
+					</thead>
+					<tbody id="playerList">
 
-				</tbody>
-			</table>
-			<h2>Select points needed to win</h2>
-			<div id="selectPointsContainer" class="mb">
+					</tbody>
+				</table>
+				<h2>Select points needed to win</h2>
+				<div id="selectPointsContainer" class="mb">
+				</div>
+				<button class="btn" id="startButton" disabled>
+					<div>Start</div>
+					<small>(space)</small>
+				</button>
 			</div>
-			<button class="btn lg" id="startButton">Start</button>
+			<div id="scoreboard" style="display: none">
+				<h2>Scoreboard</h2>
+				<p style="text-align: center"></p>
+				<table class="table">
+					<thead>
+						<td style="width: 200px">Player</td>
+						<td>Points</td>
+					</thead>
+					<tbody id="scoreboardList"></tbody>
+				</table>
+				<button id="againButton" style="text-align: center" class="btn">
+					<div>Continue</div>
+					<small>(space)</small>
+				</button>
+			</div>
 		</div>
-		<div id="scoreboard" style="display: none">
-			<h2>Scoreboard</h2>
-			<p style="text-align: center"></p>
-			<table class="table">
-				<thead>
-					<td style="width: 200px">Player</td>
-					<td>Points</td>
-				</thead>
-				<tbody id="scoreboardList"></tbody>
-			</table>
-		</div>
-	</div>
-</body>
+	</body>
 
-<script src="js/pixi.min.js"></script>
-<script src="js/utilities.js"></script>
-<script src="js/game/players.js"></script>
-<script src="js/game/keyboard.js"></script>
-<script src="js/game/collision.js"></script>
-<script src="js/game/Player.js"></script>
-<script src="js/game/PowerUp.js"></script>
-<script src="js/game/index.js"></script>
-<script src="js/game.js"></script>
-<style>
-	body, html {
-		padding: 0;
-		margin: 0;
-		font-family: Roboto;
-	}
-	h1, h2 {
-		text-align: center;
-		margin-bottom: .25em;
-	}
-	.title {
-		font-size: 100px;
-	}
-	.btn {
-		width: 100%;
-		padding: .5em;
-		font-size: 2em;
-		background-color: white;
-		border: none;
-	}
-	.btn.lg {
-		font-size: 3em
-	}
-	.btn.active {
-		background-color: teal;
-		color: white;
-	}
-	.btn:hover {
-		cursor: pointer;
-	}
-	.table td {
-		padding: 10px;
-		font-size: 30px;
-	}
-	.player-row:hover {
-		cursor: pointer;
-	}
-	#menuContainer {
-		color: white;
-		position: absolute;
-		display: flex;
-		justify-content: center;
-		justify-items: center;
-		z-index: 1000;
-		width: 100%;
-	}
-	#startScreen {
-		display: absolute;
-	}
-	#selectPointsContainer {
-		display: grid;
-		justify-content: center;
-		grid-template-columns: repeat(4, 1fr);
-	}
-	.mb {
-		margin-bottom: 1em
-	}
-</style>
+	<script src="js/pixi.min.js"></script>
+	<script src="js/utilities.js"></script>
+	<script src="js/game/players.js"></script>
+	<script src="js/game/keyboard.js"></script>
+	<script src="js/game/collision.js"></script>
+	<script src="js/game/Player.js"></script>
+	<script src="js/game/PowerUp.js"></script>
+	<script src="js/game/index.js"></script>
+	<script src="js/game.js"></script>
 
 </html>

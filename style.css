@@ -1,0 +1,91 @@
+		body,
+		html {
+			padding    : 0;
+			margin     : 0;
+			font-family: Roboto;
+			overflow   : hidden;
+			background: black;
+		}
+
+		h1,
+		h2 {
+			text-align   : center;
+			margin-bottom: .25em;
+		}
+
+		.title {
+			font-size: 100px;
+		}
+
+		.btn {
+			width           : 100%;
+			padding         : .5em;
+			font-size       : 2em;
+			background-color: white;
+			border          : none;
+		}
+
+		.btn.lg {
+			font-size: 3em;
+		}
+
+		.btn.sm {
+			font-size: 2em;
+			padding  : .25em;
+		}
+
+		.btn.active {
+			background-color: teal;
+			color           : white;
+		}
+
+		.btn:hover:not(.active):not(:disabled) {
+			cursor          : pointer;
+			background-color: rgb(194, 194, 194);
+		}
+
+		.table td {
+			padding  : 10px;
+			font-size: 30px;
+		}
+
+		.player-row:hover {
+			cursor: pointer;
+		}
+
+		.mb {
+			margin-bottom: 1em
+		}
+
+		#menuContainer {
+			color          : white;
+			position       : absolute;
+			display        : flex;
+			justify-content: center;
+			justify-items  : center;
+			z-index        : 1000;
+			width          : 100%;
+		}
+
+		#scoreboard {
+			height: 100vh;
+		}
+
+		#selectPointsContainer {
+			display              : grid;
+			justify-content      : center;
+			grid-template-columns: repeat(4, 1fr);
+		}
+
+		#againButton {
+			position: absolute;
+			bottom  : 50px;
+			width   : 50vw;
+			left    : 25vw;
+		}
+
+		#github {
+			position: absolute;
+			top     : 20px;
+			right   : 20px;
+		}

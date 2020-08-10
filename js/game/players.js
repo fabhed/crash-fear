@@ -2,18 +2,10 @@ const players = [
 	{
 		name: 'Fred',
 		color: 0xFF0000,
-		// controls: {
-		// 	left: 'a',
-		// 	right: 'd',
-		// },
 	},
 	{
 		name: 'Greenlee',
-		color: 0x10FF00,
-		// controls: {
-		// 	left: 'ArrowLeft',
-		// 	right: 'ArrowRight',
-		// },
+		color: 0x10FF,
 
 	},
 	{

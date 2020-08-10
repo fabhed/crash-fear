@@ -1,12 +1,17 @@
 class Player extends PIXI.Container {
+
 	alive = true
 	points = 0
+	active = true
+	isPaintingCooldown = 0
+	isMakingHitboxesCooldown = 0
+	makeHoleCooldown = getRandomNumberBetween(.5, 1)
+	effects = []
+	lag = 1
 	get isPainting () {
 		return this.isPaintingCooldown === 0
 	}
 	get isMakingHitboxes () {
-		// Make hitboxes in reverse proprotionally to velocity (if we go faster we need more frequent hitboxes)
-		// return this.isMakingHitboxesCooldown === 0 && this.frameCount % Math.ceil(7 / this.velocity) === 0
 		return this.isMakingHitboxesCooldown === 0
 	}
 	get hitBoxSize () {
@@ -52,17 +57,16 @@ class Player extends PIXI.Container {
 	get turn90Degrees () {
 		return this.activeEffects.some(e => e.square)
 	}
-	get color () {
-		return this.tailColor
+	get visible () {
+		return this.active
+	} 
+	set visible (val) {
+		this.active = val
 	}
-	isPaintingCooldown = 0
-	isMakingHitboxesCooldown = 0
-	frameCount = 0
-	effects = []
 	constructor(options) {
 		super()
 		this.name = options.name
-		this.tailColor = options.color
+		this.color = options.color
 		if (options.x && options.y && options.direction) {
 			this.position.set(options.x, options.y)
 			this.direction = options.direction
@@ -79,8 +83,6 @@ class Player extends PIXI.Container {
 			this.rightWasPressed = true
 		}
 
-		this.lag = 1
-		// Fixed
 		this.baseRadius = 5 // size
 		this.baseVelocity = 3
 		this.turnVelocity = this.velocity / 50
@@ -91,9 +93,13 @@ class Player extends PIXI.Container {
 		this.drawHead()
 
 	}
-	drawHead() {
+	drawHead(options) {
 		this.head.clear()
-		const color = this.hasInvertedControls ? 0x183153 : 0xf1e05a // blue or yellow
+		let defaults = {
+			indicator: false
+		}
+		options = Object.assign(defaults, options)
+		let color = this.hasInvertedControls ? 0x183153 : 0xf1e05a // blue or yellow
 		this.head.beginFill(color)
 		
 		if (this.turn90Degrees ) {
@@ -102,6 +108,11 @@ class Player extends PIXI.Container {
 			this.head.drawCircle(0, 0, this.radius)
 		}
 		this.head.endFill()
+		if (options.indicator) {
+			this.head.lineStyle(4, this.color)
+			this.head.drawCircle(0, 0, this.radius * 2)
+			this.head.endFill()
+		}
 
 		if (this.canTeleportThroughBorders) {
 			this.head.alpha = 0.4
@@ -110,9 +121,56 @@ class Player extends PIXI.Container {
 		}
 	}
 	randomizePosition(width, height) {
-		this.x = Math.random() * width
-		this.y = Math.random() * height
-		this.direction = Math.random() * 2 * Math.PI
+		// Minimum x/y distance to edges
+		let safetyP = this.radius * 2
+		this.x = getRandomNumberBetween(safetyP, width - safetyP)
+		this.y = getRandomNumberBetween(safetyP, height - safetyP)
+		
+		// Minimum x/y distance to edges when we limit direction randomness
+		let safetyD = 110 // 110 makes it so that it's possible to turn away, but hard
+		let minX = safetyD,
+			minY = safetyD,
+			maxX = width - safetyD,
+			maxY = height - safetyD
+
+		// radians
+		let top = -3/2 * Math.PI,
+			right = 0,
+			bottom = -1/2 * Math.PI,
+			left = -Math.PI
+		let direction
+		// In a corner
+		if (this.x < minX && this.y < minY) {
+			// top-left
+			direction = getRandomNumberBetween(bottom, right) // bottom-right
+		} else if (this.x > maxX && this.y < minY) {
+			// top-right
+			direction = getRandomNumberBetween(bottom, left) // bottom-left
+		} else if (this.x > maxX && this.y > maxY) {
+			// bottom-right
+			direction = getRandomNumberBetween(top, left) // top-left
+		} else if (this.x < minX && this.y > maxY) {
+			// bottom-left
+			direction = getRandomNumberBetween(top, right) // top-right
+		}
+		// On an edge
+		else if (this.y < minY) {
+			// top
+			direction = getRandomNumberBetween(right, left) // down
+		} else if (this.x > maxX) {
+			// right
+			direction = getRandomNumberBetween(bottom, top) // left
+		} else if (this.y > maxY) {
+			// bottom
+			direction = getRandomNumberBetween(right, -left) // up
+		} else if (this.x < minX) {
+			// left
+			direction = getRandomNumberBetween(bottom, -top) // right
+		} else {
+			// Not close enought to any edge or corner, any direction allowed
+			direction = Math.random() * 2 * Math.PI
+		}
+		this.direction = direction
 	}
 	turn() {
 		let left, right
@@ -134,14 +192,14 @@ class Player extends PIXI.Container {
 		}
 		let deltaDirection = this.turn90Degrees ? Math.PI / 2 : this.turnVelocity * this.lag
 		if (left) {
-			this.direction = this.direction - deltaDirection
-		} else if (right) {
 			this.direction = this.direction + deltaDirection
+		} else if (right) {
+			this.direction = this.direction - deltaDirection
 		}
 	}
 	moveForward() {
 		const dx = Math.cos(this.direction) * this.velocity, // x-component
-			dy = Math.sin(this.direction) * this.velocity // y-component
+			dy = -Math.sin(this.direction) * this.velocity // y-component
 		this.lastX = this.x
 		this.lastY = this.y
 		this.y = this.y + dy
@@ -149,7 +207,6 @@ class Player extends PIXI.Container {
 	}
 	die() {
 		if (this.isInvincible) return false
-		this.frameCount = 0
 		this.alive = false
 		return true
 
@@ -174,21 +231,23 @@ class Player extends PIXI.Container {
 	makeHole() {
 		let holeFactor = .03
 		this.isMakingHitboxesCooldown = holeFactor * this.radius
-		this.isPaintingCooldown = this.isMakingHitboxesCooldown * 0.8
+		this.isPaintingCooldown = this.isMakingHitboxesCooldown * .8
+		this.makeHoleCooldown = getRandomNumberBetween(1, 4)
 	}
 	update(dt, elapsedTime, tailHitBoxes, lineContainer) {
 		this.lag = dt * 60
 		if (!this.alive) return
 		
-		if (Math.random() > 0.98 && this.isPainting && this.isMakingHitboxes) {
+		if (this.makeHoleCooldown === 0 && this.isPainting && this.isMakingHitboxes) {
 			this.makeHole()
 		}
 		// Create hitbox
 		if (this.isMakingHitboxes) {
 			for (let x = this.spawnBox.minX; x <= this.spawnBox.maxX; x++) {
+				if (undefined === tailHitBoxes[Math.round(x)]) continue;
 				for (let y = this.spawnBox.minY; y <= this.spawnBox.maxY; y++) {
 					if (!tailHitBoxes[Math.round(x)][Math.round(y)]) {
-						tailHitBoxes[Math.round(x)][Math.round(y)] = elapsedTime
+						tailHitBoxes[Math.round(x)][Math.round(y)] = [elapsedTime, this.name]
 					}
 				}
 			}
@@ -200,7 +259,7 @@ class Player extends PIXI.Container {
 			line = new PIXI.Graphics()
 			line.lineStyle({
 				width: this.radius * 2,
-				color: this.tailColor,
+				color: this.color,
 				join: PIXI.LINE_JOIN.ROUND, // Not working?
 			})
 			line.moveTo(this.x, this.y)
@@ -218,8 +277,7 @@ class Player extends PIXI.Container {
 
 		this.isPaintingCooldown = updateCooldown(this.isPaintingCooldown, dt)
 		this.isMakingHitboxesCooldown = updateCooldown(this.isMakingHitboxesCooldown, dt)
-
-		this.frameCount++
+		this.makeHoleCooldown = updateCooldown(this.makeHoleCooldown, dt)
 
 	}
 }

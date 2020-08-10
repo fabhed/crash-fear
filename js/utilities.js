@@ -9,14 +9,12 @@ function getRandomNumberBetween(min, max) {
 	return min + Math.random() * diff
 }
 
-function waitFor(ms) {
-	return new Promise((res) => {
-		setTimeout(function () {
-			res()
-		}, 1000)
-	})
-}
-
+/**
+ * Will subtract dt from cooldown until cooldown becomes 0
+ * @param {Number} cooldown The current cooldown
+ * @param {Number} dt deltaTime
+ * @returns {Number}
+ */
 function updateCooldown(cooldown, dt) {
 	if (cooldown > 0) {
 		let newCd = cooldown - dt
@@ -39,11 +37,11 @@ function deleteObjects(objects) {
 	}
 }
 
+
 function combineMultipliers(multipliers, base) {
 	return multipliers.filter(m => typeof m === 'number').reduce((prev, curr) => {
 		return prev * curr
 	}, base)
-
 }
 
 /**
@@ -58,6 +56,12 @@ function oneIn(possibilities) {
 	return Math.round(Math.random() * possibilities - 1) === 0
 }
 
+/**
+ * Smoother animation, where it goes faster close to current = 0.5, and slower near 0, and 1
+ * @param {*} current 
+ * @param {*} directionFactor 
+ * @param {*} step 
+ */
 function animateAlpha(current, directionFactor, step = 0.005) {
 	let newDirectionFactor
 	if (current >= 1) {
@@ -76,7 +80,7 @@ function animateAlpha(current, directionFactor, step = 0.005) {
 }
 
 /**
- * 
+ * NOTE: Will not work if hexa number starts with 0
  * @param {*} number a hexa decimal number representing the color
  * @returns Color str begining with a #
  */
