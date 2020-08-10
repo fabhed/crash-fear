@@ -5,8 +5,7 @@ const players = [
 	},
 	{
 		name: 'Greenlee',
-		color: 0x10FF,
-
+		color: 0x10FF00,
 	},
 	{
 		name: 'Pinkney',
@@ -24,5 +23,4 @@ const players = [
 		name: 'Greydon',
 		color: 0xc1c0c1
 	}
-
 ]
