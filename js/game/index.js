@@ -81,7 +81,7 @@ class Game extends PIXI.Application {
 		
 		this.lineContainer = new PIXI.Container()
 		this.stage.addChild(this.lineContainer)
-
+		
 		this.playerContainer = new PIXI.Container()
 		this.stage.addChild(this.playerContainer)
 		
@@ -322,7 +322,7 @@ class Game extends PIXI.Application {
 		for (let x = 0; x < this.width; x++) {
 			this.tails[x] = []
 		}
-		deleteObjects(this.lineContainer.children)
+		this.players.forEach(p => p.clearTail())
 	}
 	clearPowerUps() {
 		deleteObjects(this.powerUps.children)
@@ -335,7 +335,7 @@ class Game extends PIXI.Application {
 		this.players = players
 			.filter(p => activatedNames.includes(p.name))
 			.map(p => {
-				return new Player(p)
+				return new Player(p, this.lineContainer)
 			})
 		
 		// Empty Scoreboard
@@ -404,25 +404,44 @@ class Game extends PIXI.Application {
 		if (!this.isRunning) return
 		const deltaTime = lag / 60 // seconds
 		this.elapsedTime += deltaTime
-
 		this.drawBorders()
 		// Handle players
 		this.activePlayers.forEach(p => {
 			// Update players
 			if (!p.alive) return
-			p.update(deltaTime, this.elapsedTime, this.tails, this.lineContainer, this.testContainer)
+			p.update(deltaTime, this.elapsedTime, this.tails, this.renderer)
 
 			// Check for borders
 			let canTp = this.portalBorders || p.canTeleportThroughBorders // Global or on player
-			let offset = this.borderWidth + p.radius
-			if (p.x - p.width / 2 < this.borderWidth) { // left
-				canTp ? p.x = this.width - offset : this.killPlayer(p)
-			} else if (p.x + p.width / 2 > this.width - this.borderWidth) { // right
-				canTp ? p.x =  + offset : this.killPlayer(p)
-			} else if (p.y - p.height / 2 < this.borderWidth) { // up
-				canTp ? p.y = this.height - offset : this.killPlayer(p)
-			} else if (p.y + p.height / 2 > this.height - this.borderWidth) { // down
-				canTp ? p.y = offset : this.killPlayer(p)
+			let offset = this.borderWidth 
+			if (p.x - p.width / 2 < 0) { // left
+				if (canTp) {
+					p.x = this.width - offset
+					p.makeNewLineSegment()
+				} else {
+					this.killPlayer(p)
+				}
+			} else if (p.x + p.width / 2 > this.width) { // right
+				if (canTp) {
+					p.x = + offset
+					p.makeNewLineSegment()
+				} else {
+					this.killPlayer(p)
+				}
+			} else if (p.y - p.height / 2 < 0) { // up
+				if (canTp) {
+					p.y = this.height - offset
+					p.makeNewLineSegment()
+				} else {
+					this.killPlayer(p)
+				}
+			} else if (p.y + p.height / 2 > this.height) { // down
+				if (canTp) {
+					p.y = offset
+					p.makeNewLineSegment()
+				} else {
+					this.killPlayer(p)
+				}
 			}
 
 			// Check for collision with tails
@@ -484,7 +503,6 @@ class Game extends PIXI.Application {
 		if (!player.alive) return
 		let died = player.die()
 		if (died) {
-			console.log('killed', player.name)
 			this.alivePlayers.forEach(p => {
 				p.points++
 			})
@@ -547,9 +565,7 @@ class Game extends PIXI.Application {
 				this.winner = null
 				this.tieBrake = true
 				this.players.forEach(p =>  {
-					console.log(playersWithMostPoints)
 					p.active = playersWithMostPoints.map(p => p.name).includes(p.name)
-					console.log(p.active)
 				})
 			}
 		}

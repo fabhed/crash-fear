@@ -8,6 +8,27 @@ class Player extends PIXI.Container {
 	makeHoleCooldown = getRandomNumberBetween(.5, 1)
 	effects = []
 	lag = 1
+	wasPainting = true
+	get lastLineSegment () {
+		let graphicsData = this.line.geometry.graphicsData
+		let last = graphicsData[graphicsData.length - 1]
+		return last
+	}
+	get lineStyle () {
+		return {
+			width: this.radius * 2,
+			texture: PIXI.Texture.WHITE,
+			color: this.color,
+			alpha: 1,
+			matrix: null,
+			alignment: 0.5,
+			native: false,
+			cap: PIXI.LINE_CAP.BUTT,
+			join: PIXI.LINE_JOIN.ROUND,
+			miterLimit: 10,
+			visible: true
+        }
+	}
 	get isPainting () {
 		return this.isPaintingCooldown === 0
 	}
@@ -63,7 +84,7 @@ class Player extends PIXI.Container {
 	set visible (val) {
 		this.active = val
 	}
-	constructor(options) {
+	constructor(options, lineContainer) {
 		super()
 		this.name = options.name
 		this.color = options.color
@@ -92,6 +113,10 @@ class Player extends PIXI.Container {
 		this.addChild(this.head);
 		this.drawHead()
 
+		// Create line
+		this.line = new PIXI.Graphics()
+		this.line.lineStyle(this.lineStyle)
+		lineContainer.addChild(this.line)
 	}
 	drawHead(options) {
 		this.head.clear()
@@ -119,6 +144,11 @@ class Player extends PIXI.Container {
 		} else {
 			this.head.alpha = 1
 		}
+	}
+	clearTail() {
+		this.line.geometry.graphicsData = []
+		this.makeNewLineSegment()
+		this.redrawLine()
 	}
 	randomizePosition(width, height) {
 		// Minimum x/y distance to edges
@@ -162,15 +192,17 @@ class Player extends PIXI.Container {
 			direction = getRandomNumberBetween(bottom, top) // left
 		} else if (this.y > maxY) {
 			// bottom
-			direction = getRandomNumberBetween(right, -left) // up
+			direction = getRandomNumberBetween(right, Math.PI * 2 - -left) // up
 		} else if (this.x < minX) {
 			// left
-			direction = getRandomNumberBetween(bottom, -top) // right
+			direction = getRandomNumberBetween(bottom, Math.PI*2 - top) // right
 		} else {
 			// Not close enought to any edge or corner, any direction allowed
 			direction = Math.random() * 2 * Math.PI
 		}
 		this.direction = direction
+		this.makeNewLineSegment()
+
 	}
 	turn() {
 		let left, right
@@ -216,6 +248,7 @@ class Player extends PIXI.Container {
 	}
 	addEffect(effect) {
 		this.effects.push(effect)
+		this.makeNewLineSegment()
 		if (effect.invincibility) {
 			this.isPaintingCooldown = 5
 			this.isMakingHitboxesCooldown = 5
@@ -226,7 +259,19 @@ class Player extends PIXI.Container {
 				effect.timedOut = true
 			}
 			this.drawHead()
+			this.makeNewLineSegment()
 		}, effect.duration * 1000)
+	}
+	makeNewLineSegment() {
+		this.line.lineStyle(this.lineStyle)
+		this.line.moveTo(this.x, this.y)
+		this.line.lineTo(this.x + .0001, this.y + .0001)
+		let newGD = new PIXI.GraphicsData(new PIXI.Polygon(this.x, this.y), this.line._fillStyle, this.lineStyle)
+		newGD.shape.closeStroke = false
+		this.line.geometry.graphicsData.push(newGD)
+	}
+	redrawLine() {
+		this.line.geometry.invalidate()
 	}
 	makeHole() {
 		let holeFactor = .03
@@ -234,7 +279,7 @@ class Player extends PIXI.Container {
 		this.isPaintingCooldown = this.isMakingHitboxesCooldown * .8
 		this.makeHoleCooldown = getRandomNumberBetween(1, 4)
 	}
-	update(dt, elapsedTime, tailHitBoxes, lineContainer) {
+	update(dt, elapsedTime, tailHitBoxes, renderer) {
 		this.lag = dt * 60
 		if (!this.alive) return
 		
@@ -253,27 +298,28 @@ class Player extends PIXI.Container {
 			}
 		}
 
-		let line
-		// Set begining of tail part
-		if (this.isPainting) {
-			line = new PIXI.Graphics()
-			line.lineStyle({
-				width: this.radius * 2,
-				color: this.color,
-				join: PIXI.LINE_JOIN.ROUND, // Not working?
-			})
-			line.moveTo(this.x, this.y)
-			lineContainer.addChild(line)
+		if (!this.wasPainting && this.isPainting) {
+			this.makeNewLineSegment()
 		}
-
 		// Make icremental movement
 		this.turn()
 		this.moveForward()
 
-		// Set end of tail part 
-		if (this.isPainting) {
-			line.lineTo(this.x, this.y);
+		// Set end of tail part - see https://github.com/pixijs/pixi.js/issues/6529
+		if (this.wasPainting && this.isPainting) {
+			let points = this.lastLineSegment.shape.points
+			let x = points[points.length-2]
+			let y = points[points.length-1]
+			let dist = Math.sqrt(Math.pow(this.x - x, 2) + Math.pow(this.y - y, 2)) // Pythagoras
+			// Limit how often we set new points to line (this makes very little visual difference and creates about 50% of the points)
+			if (dist > this.radius * 0.8) {
+				this.lastLineSegment.shape.points.push(this.x)
+				this.lastLineSegment.shape.points.push(this.y)
+				this.redrawLine()
+			}
 		}
+
+		this.wasPainting = this.isPainting
 
 		this.isPaintingCooldown = updateCooldown(this.isPaintingCooldown, dt)
 		this.isMakingHitboxesCooldown = updateCooldown(this.isMakingHitboxesCooldown, dt)
