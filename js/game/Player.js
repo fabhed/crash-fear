@@ -127,8 +127,8 @@ class Player extends PIXI.Container {
 		let color = this.hasInvertedControls ? 0x183153 : 0xf1e05a // blue or yellow
 		this.head.beginFill(color)
 		
-		if (this.turn90Degrees ) {
-			this.head.drawRect(-this.hitBoxSize / 2, -this.hitBoxSize / 2, this.hitBoxSize, this.hitBoxSize)
+		if (this.turn90Degrees) {
+			this.head.drawRect(-this.radius, -this.radius, this.radius * 2, this.radius * 2)
 		} else {
 			this.head.drawCircle(0, 0, this.radius)
 		}

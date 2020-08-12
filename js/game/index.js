@@ -15,6 +15,7 @@ class Game extends PIXI.Application {
 		fontWeight: "bold",
 		fill: "white"
 	})
+	gameContainer = document.getElementById('gameContainer')
 	startScreen = {
 		activePlayer: null,
 		pressKeyNode: 'Press desired key',
@@ -65,7 +66,8 @@ class Game extends PIXI.Application {
 			width: 800,
 			height: 600,
 			backgroundColor: 0,
-			resolution: window.devicePixelRatio || 1,
+			resolution: 1,
+			// resolution: window.devicePixelRatio || 1,
 			antialias: true,
 		})
 		document.body.appendChild(this.view);
@@ -76,9 +78,10 @@ class Game extends PIXI.Application {
 		this.renderer.autoDensity = true;
 		window.addEventListener('resize', () => {
 			this.renderer.resize(window.innerWidth, window.innerHeight);
+			console.log(window.innerWidth)
 		})
 		this.renderer.resize(window.innerWidth, window.innerHeight);
-		
+		console.log(window.innerWidth)
 		this.lineContainer = new PIXI.Container()
 		this.stage.addChild(this.lineContainer)
 		
@@ -282,7 +285,7 @@ class Game extends PIXI.Application {
 		)
 		this.borders.endHole()
 
-		if (this.portalBorders) {
+		if (this.portalBorders && this.isRunning) {
 			const { alpha, factor} = animateAlpha(this.borders.alpha, this.portalBorderAnimFactor)
 			this.borders.alpha = alpha
 			this.portalBorderAnimFactor = factor
@@ -401,10 +404,10 @@ class Game extends PIXI.Application {
 	}
 	loop(lag) {
 		// lag is a factor showing if the game is going slower or faster than expected - lag = 1 means there is no lag (60 fps)
+		this.drawBorders()
 		if (!this.isRunning) return
 		const deltaTime = lag / 60 // seconds
 		this.elapsedTime += deltaTime
-		this.drawBorders()
 		// Handle players
 		this.activePlayers.forEach(p => {
 			// Update players
@@ -413,29 +416,29 @@ class Game extends PIXI.Application {
 
 			// Check for borders
 			let canTp = this.portalBorders || p.canTeleportThroughBorders // Global or on player
-			let offset = this.borderWidth 
-			if (p.x - p.width / 2 < 0) { // left
+			let offset = canTp ? this.borderWidth : this.borderWidth + p.radius
+			if (p.x - p.width / 2 < this.borderWidth) { // left
 				if (canTp) {
 					p.x = this.width - offset
 					p.makeNewLineSegment()
 				} else {
 					this.killPlayer(p)
 				}
-			} else if (p.x + p.width / 2 > this.width) { // right
+			} else if (p.x + p.width / 2 > this.width - this.borderWidth) { // right
 				if (canTp) {
 					p.x = + offset
 					p.makeNewLineSegment()
 				} else {
 					this.killPlayer(p)
 				}
-			} else if (p.y - p.height / 2 < 0) { // up
+			} else if (p.y - p.height / 2 < this.borderWidth) { // up
 				if (canTp) {
 					p.y = this.height - offset
 					p.makeNewLineSegment()
 				} else {
 					this.killPlayer(p)
 				}
-			} else if (p.y + p.height / 2 > this.height) { // down
+			} else if (p.y + p.height / 2 > this.height - this.borderWidth) { // down
 				if (canTp) {
 					p.y = offset
 					p.makeNewLineSegment()
