@@ -292,6 +292,8 @@ class Game extends PIXI.Application {
 		}
 	}
 	startGame() {
+		this.clearTails()
+		deleteObjects(this.playerContainer.children)
 		this.createPlayers()
 		this.newRound()
 		this.startScreen.container.style.display = "none"
@@ -579,7 +581,6 @@ class Game extends PIXI.Application {
 			p.active = true
 		})
 		this.winner = null
-		deleteObjects(this.playerContainer.children)
 		this.hideMessage()
 		document.addEventListener('keydown', this.boundedEventListener)
 		this.gameStarted = false
