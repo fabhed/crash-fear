@@ -416,7 +416,7 @@ class Game extends PIXI.Application {
 
 			// Check for borders
 			let canTp = this.portalBorders || p.canTeleportThroughBorders // Global or on player
-			let offset = canTp ? this.borderWidth : this.borderWidth + p.radius
+			let offset = this.borderWidth + p.radius
 			if (p.x - p.width / 2 < this.borderWidth) { // left
 				if (canTp) {
 					p.x = this.width - offset
